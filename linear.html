@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lever Lab: Physics Playground</title>
+<style>
+  :root {
+    --bg: #1a1e29;
+    --panel-bg: rgba(30, 36, 51, 0.9);
+    --panel-border: #3b4560;
+    --primary: #ffaa00;
+    --primary-glow: rgba(255, 170, 0, 0.35);
+    --accent: #00e5ff;
+    --accent-glow: rgba(0, 229, 255, 0.35);
+    --wood: #c68a4c;
+    --wood-dark: #825324;
+    --brass: #e4b343;
+    --success: #38ef7d;
+    --text: #f0f4fc;
+    --text-muted: #8d9bb0;
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: radial-gradient(circle at 50% 20%, #252c3d 0%, var(--bg) 100%);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  header {
+    width: 100%;
+    max-width: 980px;
+    padding: 14px 20px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .title-group h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    background: linear-gradient(90deg, #fff, var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .title-group p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .level-badge {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #game-container {
+    position: relative;
+    width: 960px;
+    height: 520px;
+    max-width: 96vw;
+    background: #141822;
+    border-radius: 16px;
+    border: 2px solid var(--panel-border);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5), inset 0 0 100px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* HUD Panels */
+  .hud-top {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .metric-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(8px);
+    border-radius: 10px;
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+
+  .metric-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  .metric-val {
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  .metric-val .sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: normal;
+  }
+
+  .metric-input { color: var(--accent); }
+  .metric-output { color: var(--primary); }
+
+  .lever-mode-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-top: 4px;
+    text-align: center;
+  }
+  .mode-fling { background: rgba(255, 170, 0, 0.15); color: var(--primary); border: 1px solid var(--primary); }
+  .mode-precision { background: rgba(0, 229, 255, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+  /* Control Panel */
+  .control-dock {
+    width: 960px;
+    max-width: 96vw;
+    margin: 12px 0 20px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 14px 20px;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr auto;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .slider-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    background: #252d40;
+    height: 8px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--brass);
+    border: 3px solid #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    background: #2a344a;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn:hover {
+    background: #34405c;
+    border-color: #53648a;
+  }
+
+  .btn-push {
+    background: linear-gradient(135deg, #ff9900, #e65c00);
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(230, 92, 0, 0.4);
+  }
+  .btn-push:hover {
+    background: linear-gradient(135deg, #ffaa1a, #ff6b08);
+    transform: translateY(-1px);
+  }
+  .btn-push:active {
+    transform: translateY(1px);
+  }
+
+  /* Mission Modal / Overlay */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 13, 20, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 30px;
+    z-index: 10;
+    transition: opacity 0.3s;
+  }
+
+  .overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .overlay h2 {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .overlay p {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    max-width: 520px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .overlay .tip-box {
+    background: rgba(255,255,255,0.06);
+    border-left: 3px solid var(--accent);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #d1d9e6;
+    text-align: left;
+    max-width: 500px;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-group">
+    <h1>LEVER LAB</h1>
+    <p>Archimedes' Mechanics: Displacement vs. Precision</p>
+  </div>
+  <div class="level-badge" id="level-badge">STAGE 1: TARGET FLING</div>
+</header>
+
+<div id="game-container">
+  <canvas id="canvas" width="960" height="520"></canvas>
+
+  <div class="hud-top">
+    <!-- Input Side -->
+    <div class="metric-card">
+      <span class="metric-title">Input Side (Lever Hand)</span>
+      <div class="metric-val metric-input">
+        <span id="txt-in-in">30.0</span>" 
+        <span class="sub">(<span id="txt-in-cm">76.2</span> cm)</span>
+      </div>
+      <span style="font-size:0.75rem; color:#8899ac; margin-top:3px;">Your Effort Arm</span>
+    </div>
+
+    <!-- Lever Ratio Indicator -->
+    <div class="metric-card" style="align-items: center; min-width: 170px;">
+      <span class="metric-title">Mechanical Travel</span>
+      <div class="metric-val" id="txt-ratio" style="color:#fff;">1.00×</div>
+      <div id="lever-mode-badge" class="lever-mode-tag mode-fling">BALANCED</div>
+    </div>
+
+    <!-- Output Side -->
+    <div class="metric-card">
+      <span class="metric-title">Output Side (Action Arm)</span>
+      <div class="metric-val metric-output">
+        <span id="txt-out-in">30.0</span>" 
+        <span class="sub">(<span id="txt-out-cm">76.2</span> cm)</span>
+      </div>
+      <span style="font-size:0.75rem; color:#8899ac; margin-top:3px;">Total: 60.0" (152.4 cm)</span>
+    </div>
+  </div>
+
+  <!-- Win/Fail Overlay -->
+  <div id="msg-overlay" class="overlay hidden">
+    <h2 id="modal-title">MISSION COMPLETE!</h2>
+    <p id="modal-desc">You tuned the lever perfectly.</p>
+    <div class="tip-box" id="modal-tip"></div>
+    <button class="btn btn-push" id="modal-btn">NEXT LEVEL</button>
+  </div>
+</div>
+
+<div class="control-dock">
+  <div class="slider-wrapper">
+    <div class="slider-label">
+      <span>Move Fulcrum Position</span>
+      <span style="color:var(--text-muted);">Adjusts Input vs Output Length</span>
+    </div>
+    <input type="range" id="fulcrum-slider" min="6" max="54" step="0.5" value="30">
+  </div>
+
+  <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.35;">
+    💡 <b>Tip:</b> Long output = fast wide arc. Short output = steady micro control.
+  </div>
+
+  <div class="action-buttons">
+    <button class="btn" id="btn-reset">↺ Reset</button>
+    <button class="btn btn-push" id="btn-action">PUSH DOWN</button>
+  </div>
+</div>
+
+<script>
+// --- AUDIO SYNTH (Procedural FX) ---
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+  playThud() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.frequency.setValueAtTime(140, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.16);
+  }
+  playLaunch() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.22);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.22);
+  }
+  playSuccess() {
+    this.init();
+    const notes = [440, 554, 659, 880];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, this.ctx.currentTime + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + idx * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.35);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(this.ctx.currentTime + idx * 0.08);
+      osc.stop(this.ctx.currentTime + idx * 0.08 + 0.4);
+    });
+  }
+  playBuzz() {
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 85;
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+}
+const sfx = new SoundFX();
+
+// --- GAME LOGIC & CONFIG ---
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const TOTAL_LENGTH_IN = 60.0;
+const TOTAL_LENGTH_CM = TOTAL_LENGTH_IN * 2.54; // 152.4 cm
+const BEAM_VISUAL_WIDTH = 540; // canvas pixels for full 60"
+const PX_PER_INCH = BEAM_VISUAL_WIDTH / TOTAL_LENGTH_IN; // 9 px/inch
+
+const GROUND_Y = 410;
+const FULCRUM_BASE_Y = 360;
+
+// Levels define the dual nature of levers:
+// - Fling/Displacement: need long output (short input)
+// - Precision/Control: need short output (long input)
+const LEVELS = [
+  {
+    title: "Stage 1: Launch The Berry",
+    badge: "STAGE 1: HIGH LAUNCH",
+    type: "launch",
+    desc: "Catapult the berry into the high golden basket across the gap! You need high output speed and wide travel.",
+    tip: "A long output side (and shorter input side) multiplies output speed and displacement!",
+    target: { x: 800, y: 170, w: 90, h: 50 },
+    ball: { x: 0, y: 0, r: 14, color: "#ff4757" },
+    reqType: "fling", // favors long output
+    successText: "Great shot! The long output arm provided high velocity!"
+  },
+  {
+    title: "Stage 2: Keyhole Precision",
+    badge: "STAGE 2: MICRO PRECISION",
+    type: "precision",
+    desc: "Guide the laser stylus into the narrow security slot. If it jerks too fast or overshoots the red danger zones, it resets!",
+    tip: "A shorter output side gives you microscopic, highly dampened movement for perfect control.",
+    targetSlot: { yMin: 220, yMax: 270, x: 820 },
+    reqType: "precision",
+    successText: "Flawless precision! The short output arm prevented unsteady overshooting."
+  },
+  {
+    title: "Stage 3: Vault Over The Citadel",
+    badge: "STAGE 3: MAXIMUM TRAVEL",
+    type: "launch",
+    desc: "There is a massive concrete barrier blocking the cart. Fling your payload high over it into the target basin!",
+    tip: "Set input side as small as feasible so the output side has extreme upward reach.",
+    wall: { x: 620, y: 160, w: 30, h: 250 },
+    target: { x: 820, y: 320, w: 90, h: 60 },
+    ball: { x: 0, y: 0, r: 14, color: "#2ed573" },
+    reqType: "fling",
+    successText: "Spectacular vault! Archimedes would be proud."
+  },
+  {
+    title: "Stage 4: Gentle Egg Transport",
+    badge: "STAGE 4: ULTRA DOCKING",
+    type: "dock",
+    desc: "Elevate the delicate antique crystal to align with the receiving clamp. Moving too fast will crack it!",
+    tip: "Use the highest input length (longest input, shortest output) to gain maximum control and minimize output shock.",
+    targetSlot: { yMin: 180, yMax: 215, x: 780 },
+    reqType: "precision",
+    successText: "Smooth as silk! Delicate control saved the artifact."
+  }
+];
+
+let curLevelIdx = 0;
+let level = LEVELS[curLevelIdx];
+
+// Lever state
+let inputLengthIn = 30.0; // range 6 to 54
+let leverAngle = 0; // radians
+let leverAngleVel = 0;
+let isPushing = false;
+let pushStrength = 0; // 0 to 1
+
+// Active projectile / interactables
+let projectile = null;
+let particles = [];
+let precisionHoldTimer = 0;
+let gameOver = false;
+let successTriggered = false;
+
+// DOM Elements
+const fulcrumSlider = document.getElementById('fulcrum-slider');
+const txtInIn = document.getElementById('txt-in-in');
+const txtInCm = document.getElementById('txt-in-cm');
+const txtOutIn = document.getElementById('txt-out-in');
+const txtOutCm = document.getElementById('txt-out-cm');
+const txtRatio = document.getElementById('txt-ratio');
+const leverModeBadge = document.getElementById('lever-mode-badge');
+const btnAction = document.getElementById('btn-action');
+const btnReset = document.getElementById('btn-reset');
+const levelBadge = document.getElementById('level-badge');
+
+const overlay = document.getElementById('msg-overlay');
+const modalTitle = document.getElementById('modal-title');
+const modalDesc = document.getElementById('modal-desc');
+const modalTip = document.getElementById('modal-tip');
+const modalBtn = document.getElementById('modal-btn');
+
+function updateHUD() {
+  const outLengthIn = TOTAL_LENGTH_IN - inputLengthIn;
+  const inCm = (inputLengthIn * 2.54).toFixed(1);
+  const outCm = (outLengthIn * 2.54).toFixed(1);
+
+  txtInIn.textContent = inputLengthIn.toFixed(1);
+  txtInCm.textContent = inCm;
+  txtOutIn.textContent = outLengthIn.toFixed(1);
+  txtOutCm.textContent = outCm;
+
+  const ratio = outLengthIn / inputLengthIn;
+  txtRatio.textContent = ratio.toFixed(2) + "×";
+
+  if (ratio > 1.3) {
+    leverModeBadge.textContent = "HIGH TRAVEL / SPEED";
+    leverModeBadge.className = "lever-mode-tag mode-fling";
+  } else if (ratio < 0.7) {
+    leverModeBadge.textContent = "MICRO PRECISION / CONTROL";
+    leverModeBadge.className = "lever-mode-tag mode-precision";
+  } else {
+    leverModeBadge.textContent = "BALANCED HARMONY";
+    leverModeBadge.className = "lever-mode-tag mode-fling";
+  }
+}
+
+function loadLevel(idx) {
+  curLevelIdx = idx;
+  level = LEVELS[curLevelIdx];
+  levelBadge.textContent = level.badge;
+  precisionHoldTimer = 0;
+  successTriggered = false;
+  gameOver = false;
+  projectile = null;
+  leverAngle = 0;
+  leverAngleVel = 0;
+  isPushing = false;
+  pushStrength = 0;
+
+  overlay.classList.add('hidden');
+  updateHUD();
+}
+
+function showModal(title, desc, tip, isWin) {
+  modalTitle.textContent = title;
+  modalTitle.style.color = isWin ? '#38ef7d' : '#ff4757';
+  modalDesc.textContent = desc;
+  modalTip.innerHTML = tip;
+  modalBtn.textContent = isWin ? (curLevelIdx < LEVELS.length - 1 ? "NEXT EXPERIMENT →" : "REPLAY LAB ↺") : "TRY AGAIN ↺";
+  overlay.classList.remove('hidden');
+}
+
+// Slider input
+fulcrumSlider.addEventListener('input', (e) => {
+  if (isPushing) return;
+  inputLengthIn = parseFloat(e.target.value);
+  updateHUD();
+});
+
+// Action Button & Keyboard Handling
+function startPush() {
+  isPushing = true;
+  sfx.init();
+}
+function releasePush() {
+  if (!isPushing) return;
+  isPushing = false;
+}
+
+btnAction.addEventListener('mousedown', startPush);
+window.addEventListener('mouseup', releasePush);
+btnAction.addEventListener('touchstart', (e) => { e.preventDefault(); startPush(); });
+window.addEventListener('touchend', releasePush);
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    startPush();
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    releasePush();
+  }
+});
+
+btnReset.addEventListener('click', () => loadLevel(curLevelIdx));
+modalBtn.addEventListener('click', () => {
+  if (modalTitle.textContent.includes("COMPLETE") || modalTitle.textContent.includes("ALL")) {
+    loadLevel((curLevelIdx + 1) % LEVELS.length);
+  } else {
+    loadLevel(curLevelIdx);
+  }
+});
+
+// Particles
+function spawnParticles(x, y, count, color) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.7) * 8,
+      rad: Math.random() * 4 + 2,
+      life: 1.0,
+      color: color || '#ffaa00'
+    });
+  }
+}
+
+// Main Physics Loop
+function updatePhysics() {
+  const fulcrumX = 140 + inputLengthIn * PX_PER_INCH;
+  const fulcrumY = FULCRUM_BASE_Y;
+
+  const inLenPx = inputLengthIn * PX_PER_INCH;
+  const outLenPx = (TOTAL_LENGTH_IN - inputLengthIn) * PX_PER_INCH;
+  const ratio = (TOTAL_LENGTH_IN - inputLengthIn) / inputLengthIn;
+
+  // Lever rotation mechanics
+  let targetAngle = 0;
+  if (isPushing) {
+    pushStrength = Math.min(1.0, pushStrength + 0.08);
+    // Max stroke downward on input side is limited physically
+    // Longer input side has larger travel comfort, but mechanically creates higher angle
+    targetAngle = 0.38 * pushStrength; 
+  } else {
+    pushStrength = Math.max(0, pushStrength - 0.12);
+    targetAngle = -0.05; // slight natural rest tilt
+  }
+
+  // Spring angular mechanics
+  const springK = 0.25;
+  const damping = 0.72;
+  const torque = (targetAngle - leverAngle) * springK;
+  leverAngleVel += torque;
+  leverAngleVel *= damping;
+  leverAngle += leverAngleVel;
+
+  // Clamp angle to table ground
+  const maxTilt = 0.42;
+  if (leverAngle > maxTilt) {
+    leverAngle = maxTilt;
+    leverAngleVel = 0;
+  }
+  if (leverAngle < -maxTilt) {
+    leverAngle = -maxTilt;
+    leverAngleVel = 0;
+  }
+
+  // Output tip position
+  const outTipX = fulcrumX + Math.cos(leverAngle) * outLenPx;
+  const outTipY = fulcrumY - Math.sin(leverAngle) * outLenPx;
+
+  // Level Logic
+  if (level.type === 'launch') {
+    // Projectile sits on output tip before launch
+    if (!projectile && !successTriggered && !gameOver) {
+      if (isPushing && pushStrength > 0.7 && leverAngleVel > 0.08) {
+        // LAUNCH! Speed depends directly on output arm length!
+        // v = omega * r
+        const launchSpeed = (leverAngleVel * outLenPx) * 1.35;
+        if (launchSpeed > 5) {
+          sfx.playLaunch();
+          projectile = {
+            x: outTipX,
+            y: outTipY - 14,
+            vx: Math.cos(leverAngle - Math.PI / 4.5) * launchSpeed * 1.5 + 4,
+            vy: -Math.sin(leverAngle + 0.2) * launchSpeed * 1.8 - 4,
+            r: level.ball.r,
+            color: level.ball.color
+          };
+          spawnParticles(outTipX, outTipY, 12, '#ffcc00');
+        }
+      }
+    }
+
+    if (projectile) {
+      projectile.vy += 0.42; // Gravity
+      projectile.x += projectile.vx;
+      projectile.y += projectile.vy;
+
+      // Obstacle collision (Wall in level 3)
+      if (level.wall) {
+        const w = level.wall;
+        if (
+          projectile.x + projectile.r > w.x &&
+          projectile.x - projectile.r < w.x + w.w &&
+          projectile.y + projectile.r > w.y &&
+          projectile.y - projectile.r < w.y + w.h
+        ) {
+          sfx.playBuzz();
+          spawnParticles(projectile.x, projectile.y, 16, '#99aab5');
+          projectile = null;
+          showModal("BLOCKED BY BARRIER!", "The payload crashed into the wall. Increase the output length to launch it higher!", level.tip, false);
+          return;
+        }
+      }
+
+      // Target collision
+      const t = level.target;
+      if (
+        projectile.x > t.x && projectile.x < t.x + t.w &&
+        projectile.y > t.y && projectile.y < t.y + t.h
+      ) {
+        if (!successTriggered) {
+          successTriggered = true;
+          sfx.playSuccess();
+          spawnParticles(projectile.x, projectile.y, 40, '#38ef7d');
+          setTimeout(() => {
+            showModal("BULLSEYE!", level.successText, level.tip, true);
+          }, 450);
+        }
+      }
+
+      // Ground or out of bounds collision
+      if (projectile && (projectile.y > GROUND_Y || projectile.x > canvas.width + 50)) {
+        sfx.playThud();
+        spawnParticles(projectile.x, Math.min(projectile.y, GROUND_Y), 15, '#ff4757');
+        const missedFar = projectile.x > level.target.x + level.target.w;
+        projectile = null;
+        if (!successTriggered) {
+          if (missedFar) {
+            showModal("OVERSHOT!", "You launched with too much velocity! Reduce the output length to shorten your arc.", level.tip, false);
+          } else {
+            showModal("FELL SHORT!", "The berry didn't reach the target. You need a LONGER output side to generate more fling speed!", level.tip, false);
+          }
+        }
+      }
+    }
+  } else if (level.type === 'precision' || level.type === 'dock') {
+    // Output tip acts as a controlled stylus / platform
+    const stylusTipY = outTipY;
+    const target = level.targetSlot;
+
+    // Check if within slot
+    if (stylusTipY >= target.yMin && stylusTipY <= target.yMax) {
+      precisionHoldTimer += 1 / 60;
+      if (precisionHoldTimer > 1.2 && !successTriggered) {
+        successTriggered = true;
+        sfx.playSuccess();
+        spawnParticles(target.x, (target.yMin + target.yMax)/2, 35, '#00e5ff');
+        setTimeout(() => {
+          showModal("SUCCESSFULLY DOCKED!", level.successText, level.tip, true);
+        }, 400);
+      }
+    } else {
+      precisionHoldTimer = Math.max(0, precisionHoldTimer - 2 / 60);
+
+      // In precision mode, if ratio is too twitchy (> 1.2), hitting extremes fails fast
+      if (isPushing && ratio > 1.25 && (stylusTipY < target.yMin - 40 || stylusTipY > target.yMax + 40)) {
+        if (!gameOver && !successTriggered && Math.abs(leverAngleVel) > 0.04) {
+          sfx.playBuzz();
+          showModal("TOO JITTERY!", "With a long output arm, tiny finger movements cause massive erratic leaps! Slide the fulcrum to give yourself a SHORTER output side for micro-control.", level.tip, false);
+          gameOver = true;
+        }
+      }
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.life -= 0.025;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+// --- RENDERING ---
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background Grid / Lab environment
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  // Floor / Pedestal
+  ctx.fillStyle = '#1c2230';
+  ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+  ctx.strokeStyle = '#2e3952';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y);
+  ctx.lineTo(canvas.width, GROUND_Y);
+  ctx.stroke();
+
+  const fulcrumX = 140 + inputLengthIn * PX_PER_INCH;
+  const fulcrumY = FULCRUM_BASE_Y;
+  const inLenPx = inputLengthIn * PX_PER_INCH;
+  const outLenPx = (TOTAL_LENGTH_IN - inputLengthIn) * PX_PER_INCH;
+
+  // Level specific structures
+  if (level.wall) {
+    ctx.fillStyle = '#2d3748';
+    ctx.strokeStyle = '#4a5568';
+    ctx.lineWidth = 3;
+    ctx.fillRect(level.wall.x, level.wall.y, level.wall.w, level.wall.h);
+    ctx.strokeRect(level.wall.x, level.wall.y, level.wall.w, level.wall.h);
+    // Hazard stripes on wall
+    ctx.fillStyle = '#ffaa00';
+    for (let sy = level.wall.y; sy < level.wall.y + level.wall.h; sy += 24) {
+      ctx.fillRect(level.wall.x + 4, sy, level.wall.w - 8, 8);
+    }
+  }
+
+  if (level.target) {
+    const t = level.target;
+    // Glowing target basket
+    ctx.fillStyle = 'rgba(255, 170, 0, 0.15)';
+    ctx.strokeStyle = '#ffaa00';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(t.x, t.y, t.w, t.h, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("TARGET", t.x + t.w / 2, t.y + t.h / 2 + 4);
+  }
+
+  if (level.targetSlot) {
+    const ts = level.targetSlot;
+    // Danger zones above and below
+    ctx.fillStyle = 'rgba(255, 71, 87, 0.12)';
+    ctx.fillRect(ts.x - 30, 80, 80, ts.yMin - 80);
+    ctx.fillRect(ts.x - 30, ts.yMax, 80, GROUND_Y - ts.yMax);
+
+    // Docking Window
+    const isDocked = precisionHoldTimer > 0;
+    ctx.fillStyle = isDocked ? 'rgba(56, 239, 125, 0.25)' : 'rgba(0, 229, 255, 0.15)';
+    ctx.strokeStyle = isDocked ? '#38ef7d' : '#00e5ff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ts.x - 30, ts.yMin, 80, ts.yMax - ts.yMin);
+    ctx.fillRect(ts.x - 30, ts.yMin, 80, ts.yMax - ts.yMin);
+
+    // Progress bar for docking
+    if (precisionHoldTimer > 0) {
+      const prog = Math.min(1.0, precisionHoldTimer / 1.2);
+      ctx.fillStyle = '#38ef7d';
+      ctx.fillRect(ts.x - 30, ts.yMax + 6, 80 * prog, 6);
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText("ALIGN ZONE", ts.x + 58, (ts.yMin + ts.yMax) / 2 + 4);
+  }
+
+  // Draw Fulcrum (Triangle base)
+  ctx.fillStyle = '#475569';
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(fulcrumX, fulcrumY);
+  ctx.lineTo(fulcrumX - 28, GROUND_Y);
+  ctx.lineTo(fulcrumX + 28, GROUND_Y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Pivot pin
+  ctx.fillStyle = varColor('--brass');
+  ctx.beginPath();
+  ctx.arc(fulcrumX, fulcrumY, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // --- DRAW LEVER BEAM ---
+  ctx.save();
+  ctx.translate(fulcrumX, fulcrumY);
+  ctx.rotate(-leverAngle);
+
+  // Wooden Beam Body
+  const beamThickness = 18;
+  ctx.fillStyle = '#a66a38';
+  ctx.strokeStyle = '#5a3418';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-inLenPx, -beamThickness / 2, BEAM_VISUAL_WIDTH, beamThickness, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  // Wood grain highlight
+  ctx.fillStyle = '#c58348';
+  ctx.fillRect(-inLenPx + 4, -beamThickness / 2 + 3, BEAM_VISUAL_WIDTH - 8, 3);
+
+  // Ruler tick marks along the beam (every 5 inches)
+  ctx.fillStyle = '#ffeaa7';
+  for (let i = 0; i <= TOTAL_LENGTH_IN; i += 5) {
+    const px = -inLenPx + i * PX_PER_INCH;
+    const isMajor = i % 10 === 0;
+    const tickH = isMajor ? 10 : 6;
+    ctx.fillRect(px - 1, -beamThickness / 2, 2, tickH);
+  }
+
+  // Input Handle / Plunger (Left Side)
+  ctx.fillStyle = '#00e5ff';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-inLenPx - 10, -32, 20, 24, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText("PUSH", -inLenPx, -20);
+
+  // Output Tip attachment
+  const outEndX = outLenPx;
+  if (level.type === 'launch') {
+    // Cup / Catapult Basket
+    ctx.fillStyle = '#e4b343';
+    ctx.strokeStyle = '#8d6817';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(outEndX, -10, 18, 0, Math.PI);
+    ctx.fill();
+    ctx.stroke();
+
+    // Resting Ball (if not launched)
+    if (!projectile && level.ball) {
+      ctx.fillStyle = level.ball.color;
+      ctx.beginPath();
+      ctx.arc(outEndX, -20, level.ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  } else {
+    // Stylus / Precision Pointer
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(outEndX, 0);
+    ctx.lineTo(outEndX + 35, 0);
+    ctx.stroke();
+
+    // Glowing emitter
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(outEndX + 35, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Laser beam toward target
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(outEndX + 35, 0);
+    ctx.lineTo(outEndX + 160, 0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+
+  // --- DIMENSION LINES & LABELS (INCHES & CM) ---
+  drawDimensionLine(fulcrumX - inLenPx, fulcrumY + 36, fulcrumX, fulcrumY + 36, 
+    `${inputLengthIn.toFixed(1)}" (${(inputLengthIn * 2.54).toFixed(1)} cm)`, '#00e5ff');
+
+  drawDimensionLine(fulcrumX, fulcrumY + 36, fulcrumX + outLenPx, fulcrumY + 36, 
+    `${(TOTAL_LENGTH_IN - inputLengthIn).toFixed(1)}" (${((TOTAL_LENGTH_IN - inputLengthIn) * 2.54).toFixed(1)} cm)`, '#ffaa00');
+
+  // Draw Flying Projectile
+  if (projectile) {
+    ctx.fillStyle = projectile.color;
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Motion trail
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.arc(projectile.x - projectile.vx * 1.5, projectile.y - projectile.vy * 1.5, projectile.r * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw Particles
+  particles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.rad, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+  });
+
+  // Instruction banner
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(level.desc, canvas.width / 2, 72);
+}
+
+function drawDimensionLine(x1, y1, x2, y2, label, color) {
+  if (Math.abs(x2 - x1) < 20) return;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 - 4);
+  ctx.lineTo(x1, y1 + 4);
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y1);
+  ctx.moveTo(x2, y1 - 4);
+  ctx.lineTo(x2, y1 + 4);
+  ctx.stroke();
+
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, (x1 + x2) / 2, y1 + 16);
+}
+
+function varColor(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// Interactive dragging on canvas (Alternative direct manipulation)
+let isDraggingFulcrum = false;
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const fulcrumX = 140 + inputLengthIn * PX_PER_INCH;
+
+  // Click near fulcrum base to drag
+  if (Math.abs(mx - fulcrumX) < 35 && my > FULCRUM_BASE_Y - 20 && my < GROUND_Y + 10) {
+    isDraggingFulcrum = true;
+  }
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDraggingFulcrum) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const clampedX = Math.max(140 + 6 * PX_PER_INCH, Math.min(140 + 54 * PX_PER_INCH, mx));
+  inputLengthIn = Math.round(((clampedX - 140) / PX_PER_INCH) * 2) / 2;
+  fulcrumSlider.value = inputLengthIn;
+  updateHUD();
+});
+
+window.addEventListener('mouseup', () => {
+  isDraggingFulcrum = false;
+});
+
+// Main Loop
+function gameLoop() {
+  updatePhysics();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Initialize
+updateHUD();
+loadLevel(0);
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
