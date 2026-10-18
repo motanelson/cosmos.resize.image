@@ -1,2 +1,1 @@
-# cosmos.resize.image
-resise cosmos disk image into 35 Mbytes
+Linear mecanic of lab of lever on linear mecanic
